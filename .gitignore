@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.turbo/
+baileys_auth/
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.local
+.DS_Store
