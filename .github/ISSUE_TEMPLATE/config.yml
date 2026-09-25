@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/Muriel-Gasparini/ban4life/discussions
+    about: Ask questions, share feedback, and discuss architectural ideas with the community.
+  - name: Security Vulnerability Reporting
+    url: https://github.com/Muriel-Gasparini/ban4life/security/advisories/new
+    about: Report sensitive security vulnerabilities privately.

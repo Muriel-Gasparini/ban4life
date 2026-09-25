@@ -1,90 +1,93 @@
 /**
- * Utility functions to extract message content and test for links or suspicious spam patterns.
+ * Utility functions to extract message content and normalize text from WhatsApp messages.
+ * Note: Under the Pure Jev architecture, we DO NOT filter or match text using regex.
+ * All text extraction and unwrap logic is handled here for Jev evaluation.
  */
 
-const URL_REGEX = /(?:https?:\/\/|www\.)[^\s/$.?#].[^\s]*/i;
-const WA_GROUP_REGEX = /chat\.whatsapp\.com\/[A-Za-z0-9_-]+/i;
-const WA_ME_REGEX = /wa\.me\/[0-9]+/i;
-const TELEGRAM_REGEX = /(?:t\.me|telegram\.me)\/[A-Za-z0-9_+]+/i;
-const SHORTENERS_REGEX = /(?:bit\.ly|tinyurl\.com|is\.gd|cutt\.ly|linktr\.ee|shope\.ee|s\.shopee|kwai-app\.com)\/[A-Za-z0-9_-]+/i;
+/**
+ * Unwraps nested WhatsApp messages (e.g. ephemeral, view-once, documents, edited).
+ */
+export function unwrapMessage(messageObj: any): any {
+  let current = messageObj;
+  while (current && typeof current === 'object') {
+    if (current.ephemeralMessage?.message) {
+      current = current.ephemeralMessage.message;
+    } else if (current.viewOnceMessage?.message) {
+      current = current.viewOnceMessage.message;
+    } else if (current.viewOnceMessageV2?.message) {
+      current = current.viewOnceMessageV2.message;
+    } else if (current.documentWithCaptionMessage?.message) {
+      current = current.documentWithCaptionMessage.message;
+    } else if (current.editedMessage?.message) {
+      current = current.editedMessage.message;
+    } else if (current.protocolMessage?.editedMessage) {
+      current = current.protocolMessage.editedMessage;
+    } else {
+      break;
+    }
+  }
+  return current;
+}
 
-const SPAM_KEYWORDS = [
-  /grupo\s+(?:vip|de\s+vagas|no\s+whatsapp|do\s+telegram)/i,
-  /entre\s+no\s+(?:nosso\s+)?grupo/i,
-  /link\s+do\s+grupo/i,
-  /renda\s+extra/i,
-  /ganhe\s+dinheiro/i,
-  /trabalhe\s+de\s+casa/i,
-  /pix\s+(?:imediato|na\s+hora|em\s+dobro)/i,
-  /vagas?\s+(?:urgentes?|abertas?|home\s*office)/i,
-  /cadastre-se\s+e\s+ganhe/i,
-  /clique\s+no\s+link/i,
-  /acesse\s+o\s+link/i,
-];
-
+/**
+ * Extracts pure text or media captions (image, video, document) from a WhatsApp message object.
+ * Returns null if the message contains no text/caption (e.g., pure image/media with no caption).
+ */
 export function extractMessageText(messageObj: any): string | null {
   if (!messageObj) return null;
 
+  const unwrapped = unwrapMessage(messageObj);
+  if (!unwrapped) return null;
+
   // Direct text
-  if (messageObj.conversation) {
-    return messageObj.conversation;
+  if (typeof unwrapped.conversation === 'string' && unwrapped.conversation.trim().length > 0) {
+    return unwrapped.conversation.trim();
   }
 
   // Extended text
-  if (messageObj.extendedTextMessage?.text) {
-    return messageObj.extendedTextMessage.text;
+  if (unwrapped.extendedTextMessage?.text && typeof unwrapped.extendedTextMessage.text === 'string') {
+    const trimmed = unwrapped.extendedTextMessage.text.trim();
+    if (trimmed.length > 0) return trimmed;
   }
 
   // Image caption
-  if (messageObj.imageMessage?.caption) {
-    return messageObj.imageMessage.caption;
+  if (unwrapped.imageMessage?.caption && typeof unwrapped.imageMessage.caption === 'string') {
+    const trimmed = unwrapped.imageMessage.caption.trim();
+    if (trimmed.length > 0) return trimmed;
   }
 
   // Video caption
-  if (messageObj.videoMessage?.caption) {
-    return messageObj.videoMessage.caption;
+  if (unwrapped.videoMessage?.caption && typeof unwrapped.videoMessage.caption === 'string') {
+    const trimmed = unwrapped.videoMessage.caption.trim();
+    if (trimmed.length > 0) return trimmed;
   }
 
   // Document caption
-  if (messageObj.documentMessage?.caption) {
-    return messageObj.documentMessage.caption;
+  if (unwrapped.documentMessage?.caption && typeof unwrapped.documentMessage.caption === 'string') {
+    const trimmed = unwrapped.documentMessage.caption.trim();
+    if (trimmed.length > 0) return trimmed;
   }
 
   // Template or button reply
-  if (messageObj.buttonsResponseMessage?.selectedButtonId) {
-    return messageObj.buttonsResponseMessage.selectedDisplayText || messageObj.buttonsResponseMessage.selectedButtonId;
+  if (unwrapped.buttonsResponseMessage?.selectedDisplayText) {
+    return unwrapped.buttonsResponseMessage.selectedDisplayText.trim();
   }
 
-  if (messageObj.templateButtonReplyMessage?.selectedId) {
-    return messageObj.templateButtonReplyMessage.selectedDisplayText || messageObj.templateButtonReplyMessage.selectedId;
+  if (unwrapped.templateButtonReplyMessage?.selectedDisplayText) {
+    return unwrapped.templateButtonReplyMessage.selectedDisplayText.trim();
+  }
+
+  if (unwrapped.listResponseMessage?.title) {
+    return unwrapped.listResponseMessage.title.trim();
   }
 
   return null;
 }
 
-export function containsSuspiciousPatternOrLink(text: string): boolean {
-  if (!text || typeof text !== 'string') return false;
-
-  const normalized = text.trim();
-  if (normalized.length === 0) return false;
-
-  // 1. Direct link matches
-  if (
-    URL_REGEX.test(normalized) ||
-    WA_GROUP_REGEX.test(normalized) ||
-    WA_ME_REGEX.test(normalized) ||
-    TELEGRAM_REGEX.test(normalized) ||
-    SHORTENERS_REGEX.test(normalized)
-  ) {
-    return true;
-  }
-
-  // 2. Suspicious spam promo keywords
-  for (const keywordRegex of SPAM_KEYWORDS) {
-    if (keywordRegex.test(normalized)) {
-      return true;
-    }
-  }
-
-  return false;
+/**
+ * Normalizes text for consistent hashing and comparisons.
+ */
+export function normalizeMessageText(text: string): string {
+  if (!text) return '';
+  return text.trim().toLowerCase().replace(/\s+/g, ' ');
 }

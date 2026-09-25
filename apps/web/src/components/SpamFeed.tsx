@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { SpamLogDto } from '@linkeshield/types';
+import { SpamLogDto } from '@ban4life/types';
 import { Radio, ShieldAlert, Sparkles, UserX, Clock, MessageSquare } from 'lucide-react';
 
 interface SpamFeedProps {
@@ -14,6 +14,11 @@ export const SpamFeed: React.FC<SpamFeedProps> = ({
   onInitialLogsLoaded,
 }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const onInitialLogsLoadedRef = React.useRef(onInitialLogsLoaded);
+
+  useEffect(() => {
+    onInitialLogsLoadedRef.current = onInitialLogsLoaded;
+  }, [onInitialLogsLoaded]);
 
   useEffect(() => {
     if (!token) return;
@@ -25,7 +30,7 @@ export const SpamFeed: React.FC<SpamFeedProps> = ({
         });
         if (res.ok) {
           const initialLogs: SpamLogDto[] = await res.json();
-          onInitialLogsLoaded?.(initialLogs);
+          onInitialLogsLoadedRef.current?.(initialLogs);
         }
       } catch (err) {
         console.error('Failed to load initial spam logs', err);
@@ -34,15 +39,39 @@ export const SpamFeed: React.FC<SpamFeedProps> = ({
       }
     };
     fetchLogs();
-  }, [token, onInitialLogsLoaded]);
+  }, [token]);
 
-  const formatSender = (senderJid: string) => {
-    const raw = senderJid.split('@')[0].split(':')[0];
-    if (raw.length >= 12) {
-      // Brazil format: +55 (DD) 9XXXX-XXXX
-      return `+${raw.slice(0, 2)} ${raw.slice(2, 4)} ${raw.slice(4)}`;
+  const formatPhoneNumber = (phone: string): string => {
+    const clean = phone.replace(/\D/g, '');
+    if (clean.startsWith('55') && (clean.length === 12 || clean.length === 13)) {
+      // Brazil format: +55 (DD) 9XXXX-XXXX or +55 (DD) XXXX-XXXX
+      const ddd = clean.slice(2, 4);
+      const rest = clean.slice(4);
+      if (rest.length === 9) {
+        return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+      }
+      return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
     }
-    return `+${raw}`;
+    return `+${clean}`;
+  };
+
+  const getSenderDisplay = (log: SpamLogDto) => {
+    let realPhone: string | null = log.senderPhone?.trim() || null;
+
+    if (!realPhone && log.senderJid) {
+      const isLid = log.senderJid.endsWith('@lid') || log.senderJid.includes('@lid');
+      if (!isLid && log.senderJid.endsWith('@s.whatsapp.net')) {
+        const raw = log.senderJid.split('@')[0].split(':')[0];
+        if (/^\d{8,15}$/.test(raw)) {
+          realPhone = raw;
+        }
+      }
+    }
+
+    const name = log.senderName?.trim() || null;
+    const formattedPhone = realPhone ? formatPhoneNumber(realPhone) : null;
+
+    return { name, formattedPhone };
   };
 
   const formatTime = (timestamp: number) => {
@@ -62,7 +91,7 @@ export const SpamFeed: React.FC<SpamFeedProps> = ({
   };
 
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-5 shadow-xl flex flex-col h-full">
+    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -74,13 +103,13 @@ export const SpamFeed: React.FC<SpamFeedProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
           AO VIVO
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-h-[500px] pr-1 space-y-3">
+      <div className="flex-1 overflow-y-auto max-h-[calc(100vh-270px)] min-h-[460px] pr-1.5 space-y-3.5">
         {logs.length === 0 ? (
           <div className="text-center py-16 px-4 rounded-xl border border-dashed border-zinc-800 text-zinc-500">
             {isLoading ? (
@@ -98,49 +127,67 @@ export const SpamFeed: React.FC<SpamFeedProps> = ({
         ) : (
           logs.map((log) => {
             const scorePercent = Math.round(log.jevScore * 100);
+            const { name, formattedPhone } = getSenderDisplay(log);
             return (
               <div
                 key={log.id}
-                className="p-3.5 rounded-xl bg-zinc-950/70 border border-zinc-800/90 hover:border-zinc-700 transition-all space-y-2.5 animate-in slide-in-from-top-2 duration-300"
+                className="p-4 sm:p-5 rounded-2xl bg-zinc-950/80 border border-zinc-800/90 hover:border-zinc-700/80 transition-all space-y-3.5 animate-in slide-in-from-top-2 duration-300"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 shrink-0">
-                      <UserX className="h-3.5 w-3.5" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="p-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 shrink-0">
+                      <UserX className="h-4 w-4" />
                     </span>
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-zinc-200 truncate block">
+                      <span className="text-sm font-bold text-zinc-100 truncate block">
                         {log.groupName}
                       </span>
-                      <span className="text-[11px] font-mono text-zinc-400">
-                        {formatSender(log.senderJid)}
-                      </span>
+                      <div className="flex items-center gap-2 text-xs mt-0.5 text-zinc-300">
+                        {name && <span className="font-semibold text-zinc-200">{name}</span>}
+                        {formattedPhone && (
+                          <>
+                            {name && <span className="text-zinc-600">•</span>}
+                            <span className="font-mono text-zinc-400">{formattedPhone}</span>
+                          </>
+                        )}
+                        {!name && !formattedPhone && (
+                          <span className="text-zinc-500 italic">Número privado</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end shrink-0">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
-                      <Sparkles className="h-3 w-3 text-red-400" />
+                  <div className="flex sm:flex-row flex-col sm:items-center items-end gap-2 sm:gap-3 shrink-0">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 shadow-sm">
+                      <Sparkles className="h-3.5 w-3.5 text-red-400" />
                       {scorePercent}% Jev
                     </span>
-                    <span className="text-[10px] text-zinc-500 flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3" />
+                    <span className="text-xs text-zinc-400 flex items-center gap-1 font-mono">
+                      <Clock className="h-3 w-3 text-zinc-500" />
                       {formatTime(log.createdAt)}
                     </span>
                   </div>
                 </div>
 
                 {/* Message preview */}
-                <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800/80 text-xs text-zinc-300 font-mono flex items-start gap-2">
-                  <MessageSquare className="h-3.5 w-3.5 text-zinc-500 shrink-0 mt-0.5" />
-                  <p className="line-clamp-3 break-words text-[11px]">{log.messageText}</p>
+                <div className="p-3 sm:p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800/80 text-xs sm:text-[13px] text-zinc-200 font-mono leading-relaxed flex items-start gap-2.5">
+                  <MessageSquare className="h-4 w-4 text-zinc-500 shrink-0 mt-0.5" />
+                  <p className="line-clamp-3 break-words select-text">{log.messageText}</p>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                  <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                    {getCategoryLabel(log.jevCategory)}
-                  </span>
-                  <span className="text-emerald-500 font-medium">
+                <div className="flex items-center justify-between text-xs text-zinc-400 pt-1 border-t border-zinc-900/80">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-md bg-zinc-800/90 border border-zinc-700/50 text-zinc-300 font-medium text-[11px]">
+                      {getCategoryLabel(log.jevCategory)}
+                    </span>
+                    {log.isCrossGroupBan && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold text-[10px] uppercase tracking-wider">
+                        Cross-Group Ban
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-emerald-400 font-semibold flex items-center gap-1.5 text-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                     Apagado & Banido Instantaneamente
                   </span>
                 </div>

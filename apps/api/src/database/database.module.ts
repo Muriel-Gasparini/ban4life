@@ -6,24 +6,31 @@ import Database from 'better-sqlite3';
 export const DRIZZLE_DB = 'DRIZZLE_DB';
 export const SQLITE_DB = 'SQLITE_DB';
 
+const DB_CLIENT = 'DB_CLIENT';
+
 @Global()
 @Module({
   providers: [
     {
-      provide: DRIZZLE_DB,
-      useFactory: (): DrizzleDB => {
+      provide: DB_CLIENT,
+      useFactory: () => {
         const env = loadEnv();
-        const { db } = createDatabaseClient(env.DATABASE_URL);
-        return db;
+        return createDatabaseClient(env.DATABASE_URL);
       },
     },
     {
-      provide: SQLITE_DB,
-      useFactory: (): Database.Database => {
-        const env = loadEnv();
-        const { sqlite } = createDatabaseClient(env.DATABASE_URL);
-        return sqlite;
+      provide: DRIZZLE_DB,
+      useFactory: (client: { db: DrizzleDB; sqlite: Database.Database }): DrizzleDB => {
+        return client.db;
       },
+      inject: [DB_CLIENT],
+    },
+    {
+      provide: SQLITE_DB,
+      useFactory: (client: { db: DrizzleDB; sqlite: Database.Database }): Database.Database => {
+        return client.sqlite;
+      },
+      inject: [DB_CLIENT],
     },
   ],
   exports: [DRIZZLE_DB, SQLITE_DB],

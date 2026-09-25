@@ -30,15 +30,18 @@ describe('SettingsService', () => {
   it('should return default settings when table is empty', async () => {
     const settings = await settingsService.getSettings();
     expect(settings).toEqual(DEFAULT_SETTINGS);
+    expect(settings.deleteSpamMessage).toBe(true);
   });
 
   it('should update settings and return new values', async () => {
     const updated = await settingsService.updateSettings({
+      deleteSpamMessage: false,
       sendBanNotice: true,
       banNoticeTemplate: 'Custom warning message',
       banThreshold: 0.9,
     });
 
+    expect(updated.deleteSpamMessage).toBe(false);
     expect(updated.sendBanNotice).toBe(true);
     expect(updated.banNoticeTemplate).toBe('Custom warning message');
     expect(updated.banThreshold).toBe(0.9);
@@ -48,10 +51,11 @@ describe('SettingsService', () => {
   });
 
   it('should update partial settings', async () => {
-    await settingsService.updateSettings({ sendBanNotice: true });
+    await settingsService.updateSettings({ deleteSpamMessage: false });
     const settings = await settingsService.getSettings();
 
-    expect(settings.sendBanNotice).toBe(true);
+    expect(settings.deleteSpamMessage).toBe(false);
+    expect(settings.sendBanNotice).toBe(DEFAULT_SETTINGS.sendBanNotice);
     expect(settings.banNoticeTemplate).toBe(DEFAULT_SETTINGS.banNoticeTemplate);
     expect(settings.banThreshold).toBe(DEFAULT_SETTINGS.banThreshold);
   });

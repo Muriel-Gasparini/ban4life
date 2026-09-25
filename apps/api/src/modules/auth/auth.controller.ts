@@ -1,7 +1,7 @@
 import { Body, Controller, Post, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard, Public } from './auth.guard';
-import { AuthLoginResponseDto } from '@linkeshield/types';
+import { AuthLoginResponseDto } from '@ban4life/types';
 
 @Controller('api/auth')
 export class AuthController {

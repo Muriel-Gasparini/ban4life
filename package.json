@@ -1,12 +1,15 @@
 {
-  "name": "linkeshield-monorepo",
+  "name": "ban4life",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "docker:up": "docker compose --env-file .env up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
     "turbo": "^2.4.4",

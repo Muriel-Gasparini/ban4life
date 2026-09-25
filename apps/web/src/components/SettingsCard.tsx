@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SettingsDto, UpdateSettingsDto } from '@linkeshield/types';
-import { Settings, Save, Check, BellRing } from 'lucide-react';
+import { SettingsDto, UpdateSettingsDto } from '@ban4life/types';
+import { Settings, Save, Check, BellRing, Trash2 } from 'lucide-react';
 
 interface SettingsCardProps {
   token: string | null;
@@ -8,6 +8,7 @@ interface SettingsCardProps {
 
 export const SettingsCard: React.FC<SettingsCardProps> = ({ token }) => {
   const [settings, setSettings] = useState<SettingsDto>({
+    deleteSpamMessage: true,
     sendBanNotice: false,
     banNoticeTemplate: '🚫 Mensagem apagada e usuário expulso por divulgação não autorizada.',
     banThreshold: 0.85,
@@ -44,6 +45,7 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({ token }) => {
     try {
       setIsSaving(true);
       const updateData: UpdateSettingsDto = {
+        deleteSpamMessage: settings.deleteSpamMessage,
         sendBanNotice: settings.sendBanNotice,
         banNoticeTemplate: settings.banNoticeTemplate,
         banThreshold: settings.banThreshold,
@@ -86,6 +88,31 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({ token }) => {
       </div>
 
       <form onSubmit={handleSave} className="space-y-4">
+        {/* Checkbox: Apagar mensagem de spam no grupo */}
+        <div className="flex items-start gap-3 p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80">
+          <input
+            id="deleteSpamMessage"
+            type="checkbox"
+            checked={settings.deleteSpamMessage}
+            onChange={(e) =>
+              setSettings((prev) => ({ ...prev, deleteSpamMessage: e.target.checked }))
+            }
+            className="h-4 w-4 mt-0.5 rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-zinc-900 accent-emerald-500"
+          />
+          <div className="flex-1">
+            <label
+              htmlFor="deleteSpamMessage"
+              className="text-xs sm:text-sm font-semibold text-zinc-200 cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-emerald-400" />
+              Apagar mensagem de spam no grupo
+            </label>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Se ativado, o bot revoga e apaga a mensagem de spam para todos no grupo antes de expulsar o infrator. Se desativado, o usuário é expulso mantendo a mensagem no histórico do grupo.
+            </p>
+          </div>
+        </div>
+
         {/* Checkbox: Enviar aviso no grupo */}
         <div className="flex items-start gap-3 p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80">
           <input

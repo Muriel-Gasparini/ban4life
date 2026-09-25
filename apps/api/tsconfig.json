@@ -1,5 +1,5 @@
 {
-  "extends": "@linkeshield/tsconfig/base.json",
+  "extends": "@ban4life/tsconfig/base.json",
   "compilerOptions": {
     "module": "CommonJS",
     "declaration": false,
@@ -11,6 +11,7 @@
     "target": "ES2022",
     "sourceMap": true,
     "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,

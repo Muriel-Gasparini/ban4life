@@ -1,0 +1,51 @@
+name: Feature Request
+description: Propose a new feature, enhancement, or optimization for Ban4Life.
+title: "feat(<scope>): <short description of the proposal>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please outline your proposal with sufficient architectural context and rationale.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a specific operational problem or limitation?
+      placeholder: Describe the problem or challenge you are facing...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: A detailed description of the proposed behavior and design.
+      placeholder: Outline how this feature should work and its impact on the system...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative implementations, libraries, or architectural trade-offs considered.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Target Component
+      description: Which part of the monorepo does this proposal primarily touch?
+      options:
+        - apps/api (Backend, Moderation, Baileys, SQLite)
+        - apps/web (Frontend Dashboard, SSE Feed)
+        - packages/types (Domain Interfaces)
+        - Deployment / Docker Configuration
+        - CI / Tooling
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Verification
+      options:
+        - label: I have searched existing discussions and issues to confirm this proposal is novel.
+          required: true
+        - label: I am willing to submit a pull request implementing this feature if approved.

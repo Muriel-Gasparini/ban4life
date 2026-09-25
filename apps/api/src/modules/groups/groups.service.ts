@@ -1,9 +1,9 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import { DrizzleDB } from '../../database';
 import { groups } from '../../database/schema';
-import { GroupDto } from '@linkeshield/types';
+import { GroupDto } from '@ban4life/types';
 import { EventsService } from '../events/events.service';
 
 @Injectable()
@@ -13,15 +13,29 @@ export class GroupsService {
     private readonly eventsService: EventsService,
   ) {}
 
-  async listGroups(): Promise<GroupDto[]> {
-    const rows = await this.db.select().from(groups);
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      isProtected: Boolean(r.isProtected),
-      participantCount: r.participantCount,
-      updatedAt: r.updatedAt,
-    }));
+  async listGroups(onlyAdmin: boolean = true): Promise<GroupDto[]> {
+    let query = this.db.select().from(groups);
+
+    if (onlyAdmin) {
+      query = query.where(eq(groups.isBotAdmin, true)) as any;
+    }
+
+    const rows = await query.orderBy(desc(groups.isProtected), asc(groups.name));
+    return rows
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        isProtected: Boolean(r.isProtected),
+        isBotAdmin: Boolean(r.isBotAdmin),
+        participantCount: r.participantCount,
+        updatedAt: r.updatedAt,
+      }))
+      .sort((a, b) => {
+        if (a.isProtected !== b.isProtected) {
+          return a.isProtected ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+      });
   }
 
   async getGroup(id: string): Promise<GroupDto | null> {
@@ -32,6 +46,7 @@ export class GroupsService {
       id: r.id,
       name: r.name,
       isProtected: Boolean(r.isProtected),
+      isBotAdmin: Boolean(r.isBotAdmin),
       participantCount: r.participantCount,
       updatedAt: r.updatedAt,
     };
@@ -40,6 +55,18 @@ export class GroupsService {
   async isGroupProtected(id: string): Promise<boolean> {
     const g = await this.getGroup(id);
     return g ? g.isProtected : false;
+  }
+
+  async listProtectedGroups(): Promise<GroupDto[]> {
+    const rows = await this.db.select().from(groups).where(eq(groups.isProtected, true));
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      isProtected: Boolean(r.isProtected),
+      isBotAdmin: Boolean(r.isBotAdmin),
+      participantCount: r.participantCount,
+      updatedAt: r.updatedAt,
+    }));
   }
 
   async toggleGroup(id: string, explicitState?: boolean): Promise<GroupDto> {
@@ -67,7 +94,7 @@ export class GroupsService {
   }
 
   async syncGroups(
-    newGroups: { id: string; name: string; participantCount: number }[],
+    newGroups: { id: string; name: string; participantCount: number; isBotAdmin?: boolean }[],
   ): Promise<void> {
     const now = Date.now();
     for (const group of newGroups) {
@@ -78,6 +105,7 @@ export class GroupsService {
           .set({
             name: group.name,
             participantCount: group.participantCount,
+            ...(group.isBotAdmin !== undefined ? { isBotAdmin: group.isBotAdmin } : {}),
             updatedAt: now,
           })
           .where(eq(groups.id, group.id));
@@ -87,9 +115,48 @@ export class GroupsService {
           name: group.name,
           isProtected: false,
           participantCount: group.participantCount,
+          isBotAdmin: group.isBotAdmin ?? false,
           updatedAt: now,
         });
       }
     }
+  }
+
+  async updateGroupAdminStatus(id: string, isBotAdmin: boolean): Promise<void> {
+    const existing = await this.getGroup(id);
+    if (!existing) return;
+    const now = Date.now();
+    await this.db
+      .update(groups)
+      .set({
+        isBotAdmin,
+        updatedAt: now,
+      })
+      .where(eq(groups.id, id));
+
+    this.eventsService.emitGroup({
+      ...existing,
+      isBotAdmin,
+      updatedAt: now,
+    });
+  }
+
+  async updateGroupName(id: string, name: string): Promise<void> {
+    const existing = await this.getGroup(id);
+    if (!existing) return;
+    const now = Date.now();
+    await this.db
+      .update(groups)
+      .set({
+        name,
+        updatedAt: now,
+      })
+      .where(eq(groups.id, id));
+
+    this.eventsService.emitGroup({
+      ...existing,
+      name,
+      updatedAt: now,
+    });
   }
 }

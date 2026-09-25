@@ -1,5 +1,5 @@
 {
-  "name": "@linkeshield/web",
+  "name": "@ban4life/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -9,13 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@linkeshield/types": "workspace:*",
+    "@ban4life/types": "workspace:*",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@linkeshield/tsconfig": "workspace:*",
+    "@ban4life/tsconfig": "workspace:*",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

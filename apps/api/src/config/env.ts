@@ -6,7 +6,7 @@ export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ADMIN_PASSWORD: z.string().min(1).default('admin123'),
   TYPESAFE_API_KEY: z.string().optional().default(''),
-  DATABASE_URL: z.string().default('file:./data/linkeshield.db'),
+  DATABASE_URL: z.string().default('file:./data/ban4life.db'),
   JWT_SECRET: z.string().optional(),
   AUTH_DIR: z.string().default('./data/baileys_auth'),
 });

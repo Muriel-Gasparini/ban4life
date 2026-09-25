@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GroupDto } from '@linkeshield/types';
+import { GroupDto } from '@ban4life/types';
 
 export function useGroups(token: string | null) {
   const [groups, setGroups] = useState<GroupDto[]>([]);
@@ -33,9 +33,12 @@ export function useGroups(token: string | null) {
   const toggleGroup = async (id: string): Promise<boolean> => {
     if (!token) return false;
 
+    const currentGroup = groups.find((g) => g.id === id);
+    const targetState = currentGroup ? !currentGroup.isProtected : true;
+
     // Optimistic UI update
     setGroups((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, isProtected: !g.isProtected } : g)),
+      prev.map((g) => (g.id === id ? { ...g, isProtected: targetState } : g)),
     );
 
     try {
@@ -45,6 +48,7 @@ export function useGroups(token: string | null) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ isProtected: targetState }),
       });
 
       if (!res.ok) {

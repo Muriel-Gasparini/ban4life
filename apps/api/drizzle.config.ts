@@ -5,6 +5,6 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_URL?.replace(/^file:/, '') || './data/linkeshield.db',
+    url: process.env.DATABASE_URL?.replace(/^file:/, '') || './data/ban4life.db',
   },
 });

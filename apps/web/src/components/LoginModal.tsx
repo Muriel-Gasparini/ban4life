@@ -33,7 +33,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLogin }) => {
           <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
             <Shield className="h-6 w-6 text-zinc-950 stroke-[2.5]" />
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">LinkeShield Painel</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">Ban4Life Painel</h2>
           <p className="text-xs text-zinc-400 mt-1">
             Digite a senha de administrador para acessar o painel de proteção.
           </p>

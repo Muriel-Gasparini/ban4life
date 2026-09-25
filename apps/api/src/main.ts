@@ -16,10 +16,10 @@ async function bootstrap() {
   });
 
   await app.listen(env.PORT);
-  logger.log(`🛡️ LinkeShield API listening on port ${env.PORT} (${env.NODE_ENV})`);
+  logger.log(`🛡️ Ban4Life API listening on port ${env.PORT} (${env.NODE_ENV})`);
 }
 
 bootstrap().catch((err) => {
-  console.error('Fatal error starting LinkeShield API:', err);
+  console.error('Fatal error starting Ban4Life API:', err);
   process.exit(1);
 });

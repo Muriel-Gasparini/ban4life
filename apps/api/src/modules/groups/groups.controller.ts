@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
-import { GroupDto, GroupToggleDto } from '@linkeshield/types';
+import { GroupDto, GroupToggleDto } from '@ban4life/types';
 import { AuthGuard } from '../auth/auth.guard';
 
 @UseGuards(AuthGuard)

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { BaileysStatus, GroupDto, SpamLogDto } from '@linkeshield/types';
+import { BaileysStatus, GroupDto, SpamLogDto } from '@ban4life/types';
 
 interface UseSSEOptions {
   token: string | null;
@@ -10,6 +10,23 @@ interface UseSSEOptions {
 
 export function useSSE({ token, onStatus, onSpam, onGroup }: UseSSEOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  // Keep latest callbacks in refs to avoid reconnecting on every render
+  const onStatusRef = useRef(onStatus);
+  const onSpamRef = useRef(onSpam);
+  const onGroupRef = useRef(onGroup);
+
+  useEffect(() => {
+    onStatusRef.current = onStatus;
+  }, [onStatus]);
+
+  useEffect(() => {
+    onSpamRef.current = onSpam;
+  }, [onSpam]);
+
+  useEffect(() => {
+    onGroupRef.current = onGroup;
+  }, [onGroup]);
 
   useEffect(() => {
     if (!token) return;
@@ -25,13 +42,13 @@ export function useSSE({ token, onStatus, onSpam, onGroup }: UseSSEOptions) {
 
         switch (payload.type) {
           case 'status':
-            onStatus?.(payload.data.status);
+            onStatusRef.current?.(payload.data.status);
             break;
           case 'spam':
-            onSpam?.(payload.data);
+            onSpamRef.current?.(payload.data);
             break;
           case 'group':
-            onGroup?.(payload.data);
+            onGroupRef.current?.(payload.data);
             break;
           case 'ping':
             // heartbeat ping
@@ -50,5 +67,5 @@ export function useSSE({ token, onStatus, onSpam, onGroup }: UseSSEOptions) {
       es.close();
       eventSourceRef.current = null;
     };
-  }, [token, onStatus, onSpam, onGroup]);
+  }, [token]);
 }

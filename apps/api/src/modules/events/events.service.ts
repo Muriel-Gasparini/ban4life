@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, MessageEvent } from '@nestjs/common';
 import { Subject, Observable, interval, merge, map } from 'rxjs';
-import { BaileysStatus, GroupDto, SpamLogDto } from '@linkeshield/types';
+import { BaileysStatus, GroupDto, SpamLogDto } from '@ban4life/types';
 
 @Injectable()
 export class EventsService implements OnModuleDestroy {

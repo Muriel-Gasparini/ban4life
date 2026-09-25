@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const STORAGE_KEY = 'linkeshield_token';
+const STORAGE_KEY = 'ban4life_token';
 
 export function useAuth() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));

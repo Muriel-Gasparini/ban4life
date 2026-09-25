@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
-import { SettingsDto, UpdateSettingsDto } from '@linkeshield/types';
+import { SettingsDto, UpdateSettingsDto } from '@ban4life/types';
 import { AuthGuard } from '../auth/auth.guard';
 
 @UseGuards(AuthGuard)

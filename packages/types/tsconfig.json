@@ -1,5 +1,5 @@
 {
-  "extends": "@linkeshield/tsconfig/base.json",
+  "extends": "@ban4life/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src"

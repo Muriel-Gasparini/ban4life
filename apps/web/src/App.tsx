@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BaileysStatus, SpamLogDto } from '@linkeshield/types';
+import { BaileysStatus, SpamLogDto, MetricsDto } from '@ban4life/types';
 import { useAuth } from './hooks/useAuth';
 import { useSSE } from './hooks/useSSE';
 import { useGroups } from './hooks/useGroups';
 import { Header } from './components/Header';
+import { MetricsOverview } from './components/MetricsOverview';
 import { GroupList } from './components/GroupList';
-import { SettingsCard } from './components/SettingsCard';
 import { SpamFeed } from './components/SpamFeed';
+import { SettingsSidebar } from './components/SettingsSidebar';
 import { QRCodeModal } from './components/QRCodeModal';
 import { LoginModal } from './components/LoginModal';
 
@@ -15,10 +16,32 @@ export function App() {
   const [baileysStatus, setBaileysStatus] = useState<BaileysStatus>('connecting');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [logs, setLogs] = useState<SpamLogDto[]>([]);
+  const [metrics, setMetrics] = useState<MetricsDto>({
+    totalEvaluated: 0,
+    totalSpamsBanned: 0,
+    cacheHits: 0,
+  });
 
   const { groups, isLoading: groupsLoading, fetchGroups, toggleGroup, updateGroupInList } =
     useGroups(token);
+
+  // Fetch metrics from API
+  const fetchMetrics = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/logs/metrics', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data: MetricsDto = await res.json();
+        setMetrics(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch metrics', err);
+    }
+  }, [token]);
 
   // Fetch initial Baileys status and QR code
   const fetchBaileysStatus = useCallback(async () => {
@@ -52,12 +75,15 @@ export function App() {
 
   useEffect(() => {
     fetchBaileysStatus();
-  }, [fetchBaileysStatus]);
+    fetchMetrics();
+  }, [fetchBaileysStatus, fetchMetrics]);
 
-  // Connect SSE for live real-time events
-  useSSE({
-    token,
-    onStatus: (newStatus) => {
+  const handleInitialLogsLoaded = useCallback((initial: SpamLogDto[]) => {
+    setLogs(initial);
+  }, []);
+
+  const handleStatusUpdate = useCallback(
+    (newStatus: BaileysStatus) => {
       setBaileysStatus(newStatus);
       if (newStatus === 'waiting_qr') {
         setIsQrModalOpen(true);
@@ -67,12 +93,31 @@ export function App() {
         fetchGroups();
       }
     },
-    onSpam: (newSpam) => {
-      setLogs((prev) => [newSpam, ...prev]);
-    },
-    onGroup: (updatedGroup) => {
+    [fetchBaileysStatus, fetchGroups],
+  );
+
+  const handleSpamEvent = useCallback((newSpam: SpamLogDto) => {
+    setLogs((prev) => [newSpam, ...prev]);
+    setMetrics((prev) => ({
+      ...prev,
+      totalEvaluated: prev.totalEvaluated + 1,
+      totalSpamsBanned: prev.totalSpamsBanned + 1,
+    }));
+  }, []);
+
+  const handleGroupEvent = useCallback(
+    (updatedGroup: any) => {
       updateGroupInList(updatedGroup);
     },
+    [updateGroupInList],
+  );
+
+  // Connect SSE for live real-time events
+  useSSE({
+    token,
+    onStatus: handleStatusUpdate,
+    onSpam: handleSpamEvent,
+    onGroup: handleGroupEvent,
   });
 
   const handleRestartBaileys = async () => {
@@ -91,7 +136,7 @@ export function App() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500 text-xs">
-        Carregando painel LinkeShield...
+        Carregando painel Ban4Life...
       </div>
     );
   }
@@ -100,41 +145,61 @@ export function App() {
     return <LoginModal onLogin={login} />;
   }
 
+  const protectedCount = groups.filter((g) => g.isProtected).length;
+
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col text-zinc-100">
       <Header
         status={baileysStatus}
         spamCount={logs.length}
+        metrics={metrics}
         onLogout={logout}
         onOpenQr={() => setIsQrModalOpen(true)}
         onRestartBaileys={handleRestartBaileys}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Groups + Settings */}
-          <div className="lg:col-span-7 space-y-6">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 lg:p-8 xl:px-10 flex flex-col">
+        {/* Top KPIs Banner */}
+        <MetricsOverview
+          protectedCount={protectedCount}
+          totalGroups={groups.length}
+          metrics={metrics}
+          baileysStatus={baileysStatus}
+          onOpenQr={() => setIsQrModalOpen(true)}
+        />
+
+        {/* Main Operational Split */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-1">
+          {/* Left: Groups (Administered) */}
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
             <GroupList
               groups={groups}
               isLoading={groupsLoading}
               onToggle={toggleGroup}
               onRefresh={fetchGroups}
             />
-
-            <SettingsCard token={token} />
           </div>
 
-          {/* Right Column: Live Spam Feed */}
-          <div className="lg:col-span-5 h-full">
+          {/* Right: Live Spam Feed (Expansive Real-Time Stream) */}
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
             <SpamFeed
               token={token}
               logs={logs}
-              onInitialLogsLoaded={(initial) => setLogs(initial)}
+              onInitialLogsLoaded={handleInitialLogsLoaded}
             />
           </div>
         </div>
       </main>
 
+      {/* Collapsible Settings Drawer */}
+      <SettingsSidebar
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        token={token}
+      />
+
+      {/* QR Code Modal */}
       <QRCodeModal
         isOpen={isQrModalOpen}
         onClose={() => setIsQrModalOpen(false)}

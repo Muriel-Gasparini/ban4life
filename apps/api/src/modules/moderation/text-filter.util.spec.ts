@@ -1,6 +1,7 @@
 import {
   extractMessageText,
-  containsSuspiciousPatternOrLink,
+  normalizeMessageText,
+  unwrapMessage,
 } from './text-filter.util';
 
 describe('text-filter.util', () => {
@@ -26,67 +27,112 @@ describe('text-filter.util', () => {
       expect(extractMessageText(msg)).toBe('Foto do evento');
     });
 
+    it('should return null for image without caption', () => {
+      const msg = { imageMessage: { url: 'https://example.com/image.jpg' } };
+      expect(extractMessageText(msg)).toBeNull();
+    });
+
     it('should extract video caption', () => {
       const msg = { videoMessage: { caption: 'Vídeo da apresentação' } };
       expect(extractMessageText(msg)).toBe('Vídeo da apresentação');
+    });
+
+    it('should return null for video without caption', () => {
+      const msg = { videoMessage: { seconds: 15 } };
+      expect(extractMessageText(msg)).toBeNull();
     });
 
     it('should extract document caption', () => {
       const msg = { documentMessage: { caption: 'Relatório em PDF' } };
       expect(extractMessageText(msg)).toBe('Relatório em PDF');
     });
+
+    it('should return null for document without caption', () => {
+      const msg = { documentMessage: { fileName: 'relatorio.pdf' } };
+      expect(extractMessageText(msg)).toBeNull();
+    });
+
+    it('should extract text from ephemeral message wrappers', () => {
+      const msg = {
+        ephemeralMessage: {
+          message: {
+            conversation: 'Mensagem em grupo com mensagens temporárias ativas',
+          },
+        },
+      };
+      expect(extractMessageText(msg)).toBe(
+        'Mensagem em grupo com mensagens temporárias ativas',
+      );
+    });
+
+    it('should extract caption from viewOnceMessage and viewOnceMessageV2 wrappers', () => {
+      const msg1 = {
+        viewOnceMessage: {
+          message: {
+            imageMessage: {
+              caption: 'Foto de visualização única com link https://promo.com',
+            },
+          },
+        },
+      };
+      expect(extractMessageText(msg1)).toBe(
+        'Foto de visualização única com link https://promo.com',
+      );
+
+      const msg2 = {
+        viewOnceMessageV2: {
+          message: {
+            videoMessage: {
+              caption: 'Vídeo secreto com oferta',
+            },
+          },
+        },
+      };
+      expect(extractMessageText(msg2)).toBe('Vídeo secreto com oferta');
+    });
+
+    it('should extract text from edited message wrappers', () => {
+      const msg = {
+        editedMessage: {
+          message: {
+            conversation: 'Texto editado pelo usuário',
+          },
+        },
+      };
+      expect(extractMessageText(msg)).toBe('Texto editado pelo usuário');
+    });
+
+    it('should return null when text is only whitespace', () => {
+      expect(extractMessageText({ conversation: '   ' })).toBeNull();
+      expect(extractMessageText({ extendedTextMessage: { text: '  \n  ' } })).toBeNull();
+    });
   });
 
-  describe('containsSuspiciousPatternOrLink', () => {
-    it('should return false for empty or non-string inputs', () => {
-      expect(containsSuspiciousPatternOrLink('')).toBe(false);
-      expect(containsSuspiciousPatternOrLink('   ')).toBe(false);
-      expect(containsSuspiciousPatternOrLink(null as any)).toBe(false);
-      expect(containsSuspiciousPatternOrLink(undefined as any)).toBe(false);
+  describe('normalizeMessageText', () => {
+    it('should trim, lowercase, and collapse multiple whitespace', () => {
+      expect(normalizeMessageText('  OLÁ   MUNDO \n\n Teste  ')).toBe('olá mundo teste');
     });
 
-    it('should return false for organic conversation without links or spam patterns', () => {
-      expect(containsSuspiciousPatternOrLink('Bom dia, alguém sabe que horas começa a reunião?')).toBe(false);
-      expect(containsSuspiciousPatternOrLink('Valeu pelo feedback, vou ajustar o código!')).toBe(false);
-      expect(containsSuspiciousPatternOrLink('Parabéns pela conquista!')).toBe(false);
+    it('should handle empty or null values', () => {
+      expect(normalizeMessageText('')).toBe('');
+      expect(normalizeMessageText(null as any)).toBe('');
     });
+  });
 
-    it('should detect standard http and https URLs', () => {
-      expect(containsSuspiciousPatternOrLink('Acesse https://exemplo.com para conferir')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Veja http://meusite.com/promocao')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Entrem em www.promocao-pix.com')).toBe(true);
-    });
-
-    it('should detect WhatsApp group invite links', () => {
-      expect(
-        containsSuspiciousPatternOrLink('Entrem no grupo novo: https://chat.whatsapp.com/ABC12345XYZ'),
-      ).toBe(true);
-      expect(
-        containsSuspiciousPatternOrLink('chat.whatsapp.com/Ghi7890JKL'),
-      ).toBe(true);
-    });
-
-    it('should detect wa.me direct links', () => {
-      expect(containsSuspiciousPatternOrLink('Me chama no privado: wa.me/5511999999999')).toBe(true);
-    });
-
-    it('should detect Telegram invite links', () => {
-      expect(containsSuspiciousPatternOrLink('Grupo de vagas no telegram: t.me/vagasremotas')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Entre em telegram.me/canalvip')).toBe(true);
-    });
-
-    it('should detect URL shorteners', () => {
-      expect(containsSuspiciousPatternOrLink('Clique aqui bit.ly/rendaextra2026')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('tinyurl.com/vagas-abertas')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('linktr.ee/promocoes')).toBe(true);
-    });
-
-    it('should detect suspicious spam promo phrases', () => {
-      expect(containsSuspiciousPatternOrLink('Quer renda extra trabalhando poucas horas?')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Ganhe dinheiro rápido na sua conta')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Entre no nosso grupo exclusivo')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Temos vagas home office urgentes')).toBe(true);
-      expect(containsSuspiciousPatternOrLink('Faça o cadastro e clique no link')).toBe(true);
+  describe('unwrapMessage', () => {
+    it('should handle deeply nested wrappers', () => {
+      const deeplyNested = {
+        ephemeralMessage: {
+          message: {
+            viewOnceMessage: {
+              message: {
+                conversation: 'Deep text',
+              },
+            },
+          },
+        },
+      };
+      expect(unwrapMessage(deeplyNested)).toEqual({ conversation: 'Deep text' });
     });
   });
 });

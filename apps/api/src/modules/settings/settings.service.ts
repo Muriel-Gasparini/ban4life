@@ -3,9 +3,10 @@ import { eq } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import { DrizzleDB } from '../../database';
 import { settings } from '../../database/schema';
-import { SettingsDto, UpdateSettingsDto } from '@linkeshield/types';
+import { SettingsDto, UpdateSettingsDto } from '@ban4life/types';
 
 export const DEFAULT_SETTINGS: SettingsDto = {
+  deleteSpamMessage: true,
   sendBanNotice: false,
   banNoticeTemplate: '🚫 Mensagem apagada e usuário expulso por divulgação não autorizada.',
   banThreshold: 0.85,
@@ -18,6 +19,10 @@ export class SettingsService {
   async getSettings(): Promise<SettingsDto> {
     const rows = await this.db.select().from(settings);
     const settingsMap = new Map(rows.map((r) => [r.key, r.value]));
+
+    const deleteSpamMessage = settingsMap.has('deleteSpamMessage')
+      ? settingsMap.get('deleteSpamMessage') === 'true'
+      : DEFAULT_SETTINGS.deleteSpamMessage;
 
     const sendBanNotice = settingsMap.has('sendBanNotice')
       ? settingsMap.get('sendBanNotice') === 'true'
@@ -32,6 +37,7 @@ export class SettingsService {
       : DEFAULT_SETTINGS.banThreshold;
 
     return {
+      deleteSpamMessage,
       sendBanNotice,
       banNoticeTemplate,
       banThreshold: isNaN(banThreshold) ? DEFAULT_SETTINGS.banThreshold : banThreshold,
@@ -39,6 +45,9 @@ export class SettingsService {
   }
 
   async updateSettings(update: UpdateSettingsDto): Promise<SettingsDto> {
+    if (update.deleteSpamMessage !== undefined) {
+      await this.setKey('deleteSpamMessage', String(update.deleteSpamMessage));
+    }
     if (update.sendBanNotice !== undefined) {
       await this.setKey('sendBanNotice', String(update.sendBanNotice));
     }

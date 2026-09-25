@@ -10,13 +10,15 @@ import { EventsModule } from './modules/events/events.module';
 import { TypeSafeModule } from './modules/typesafe/typesafe.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { BaileysModule } from './modules/baileys/baileys.module';
+import { CacheModule } from './modules/cache/cache.module';
 
 // Resolve frontend dist directory
 const webDistCandidates = [
-  path.resolve(__dirname, '../../web/dist'),
-  path.resolve(__dirname, '../../../apps/web/dist'),
+  path.resolve(__dirname, '../../apps/web/dist'),
+  path.resolve(__dirname, '../web/dist'),
   path.resolve(process.cwd(), 'apps/web/dist'),
-  path.resolve(process.cwd(), 'dist/web'),
+  path.resolve(process.cwd(), '../web/dist'),
+  path.resolve('/app/apps/web/dist'),
   path.resolve('/app/web/dist'),
 ];
 
@@ -31,6 +33,7 @@ for (const candidate of webDistCandidates) {
 @Module({
   imports: [
     DatabaseModule,
+    CacheModule,
     AuthModule,
     SettingsModule,
     GroupsModule,

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { BaileysService } from './baileys.service';
-import { BaileysQrDto, BaileysStatusDto } from '@linkeshield/types';
+import { BaileysQrDto, BaileysStatusDto } from '@ban4life/types';
 import { AuthGuard } from '../auth/auth.guard';
 
 @UseGuards(AuthGuard)

@@ -1,19 +1,16 @@
 version: '3.8'
 
 services:
-  linkeshield:
+  ban4life:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: linkeshield-bot
+    container_name: ban4life-bot
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - ADMIN_PASSWORD=sua_senha_secreta_aqui
-      - TYPESAFE_API_KEY=sua_chave_typesafe_aqui
-      - DATABASE_URL=file:/app/data/linkeshield.db
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data
+

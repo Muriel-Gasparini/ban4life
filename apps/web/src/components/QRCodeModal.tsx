@@ -1,6 +1,6 @@
 import React from 'react';
 import { QrCode, RefreshCw, X, Smartphone, CheckCircle2 } from 'lucide-react';
-import { BaileysStatus } from '@linkeshield/types';
+import { BaileysStatus } from '@ban4life/types';
 
 interface QRCodeModalProps {
   isOpen: boolean;
